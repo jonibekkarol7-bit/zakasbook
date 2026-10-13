@@ -58,11 +58,11 @@ if not TOKEN:
     raise RuntimeError("BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan. Tokenni kodga yozmang.")
 ADMIN_ID       = 6722242402
 ADMIN_USERNAME = "@admoyin_lvl"
-ADMIN_PHONE    = "+998950714664"
+ADMIN_PHONE    = "+998931407381"
 
 CARD_HOLDER = "Mustafayev Jonibek"
-HUMO_CARD   = "9860 1606 4184 4008"
-UZUM_CARD   = "4916 9903 2538 3294"
+HUMO_CARD   = "9860 1701 3065 6763"
+VISA_CARD   = "4023 0602 0575 2529"
 
 FLOOD_LIMIT      = 5
 FLOOD_INTERVAL   = 3
@@ -395,14 +395,39 @@ def cart_keyboard(uid: int) -> InlineKeyboardMarkup:
         rows.append([InlineKeyboardButton(text="📦 Buyurtma berish", callback_data="order_cart")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def admin_order_keyboard(order_id: int, uid: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"admin_confirm:{order_id}:{uid}"),
-            InlineKeyboardButton(text="🚚 Yuborildi",  callback_data=f"admin_sent:{order_id}:{uid}"),
-        ],
-        [InlineKeyboardButton(text="❌ Bekor qilish",  callback_data=f"admin_cancel:{order_id}:{uid}")],
-    ])
+def admin_order_keyboard(
+    order_id: int,
+    uid: int,
+    status: str = "yangi",
+) -> InlineKeyboardMarkup:
+    """Buyurtma holatiga mos admin tugmalarini qaytaradi."""
+    if status == "yangi":
+        rows = [[
+            InlineKeyboardButton(
+                text="✅ Tasdiqlash",
+                callback_data=f"admin_confirm:{order_id}:{uid}",
+            ),
+            InlineKeyboardButton(
+                text="❌ Bekor qilish",
+                callback_data=f"admin_cancel:{order_id}:{uid}",
+            ),
+        ]]
+    elif status == "tasdiqlandi":
+        rows = [[
+            InlineKeyboardButton(
+                text="🚚 Yuborildi",
+                callback_data=f"admin_sent:{order_id}:{uid}",
+            ),
+            InlineKeyboardButton(
+                text="❌ Bekor qilish",
+                callback_data=f"admin_cancel:{order_id}:{uid}",
+            ),
+        ]]
+    else:
+        # Yuborilgan yoki bekor qilingan buyurtmada faol tugma bo'lmaydi.
+        rows = []
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def promo_type_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=[
@@ -1762,7 +1787,7 @@ async def admin_orders(message: Message):
         )
         await message.answer(
             text,
-            reply_markup=admin_order_keyboard(row[0], row[1]),
+            reply_markup=admin_order_keyboard(row[0], row[1], row[14]),
             parse_mode="HTML"
         )
 
@@ -1943,27 +1968,104 @@ async def promos_list(message: Message):
 # ═══════════════════════════════════════════════════
 #  ADMIN — STATUS BOSHQARUVI
 # ═══════════════════════════════════════════════════
-async def _admin_status_action(callback: CallbackQuery, new_status: str, label: str, user_msg: str):
+async def _admin_status_action(
+    callback: CallbackQuery,
+    new_status: str,
+    label: str,
+    user_msg: str,
+):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("❌ Admin emassiz.", show_alert=True)
         return
-    parts    = callback.data.split(":")
-    order_id = int(parts[1])
-    user_id  = int(parts[2])
-    await update_order_status(order_id, new_status)
-    await safe_send(bot.send_message(
-        user_id,
-        f"{user_msg}\n🧾 Buyurtma #{order_id}\n\nSavollar: {ADMIN_USERNAME}",
-        parse_mode="HTML",
-    ))
-    await callback.answer(label, show_alert=True)
+
+    # Callback ma'lumotlarini tekshirish.
     try:
+        parts = callback.data.split(":")
+        order_id = int(parts[1])
+        user_id = int(parts[2])
+    except (ValueError, IndexError, AttributeError):
+        await callback.answer(
+            "❌ Buyurtma ma'lumoti noto'g'ri.",
+            show_alert=True,
+        )
+        return
+
+    # Faqat belgilangan ketma-ketlikda status o'zgarishiga ruxsat beriladi.
+    allowed_transitions = {
+        "yangi": {"tasdiqlandi", "bekor qilindi"},
+        "tasdiqlandi": {"yuborildi", "bekor qilindi"},
+    }
+
+    # Statusni tekshirish va yangilash bitta DB ulanishida bajariladi.
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT user_id, status FROM orders WHERE id = ?",
+            (order_id,),
+        ) as cur:
+            order = await cur.fetchone()
+
+        if not order:
+            await callback.answer(
+                "❌ Buyurtma topilmadi.",
+                show_alert=True,
+            )
+            return
+
+        actual_user_id, current_status = order
+
+        # Callbackdagi foydalanuvchi ID'si buyurtma egasiga mosligini tekshirish.
+        if int(actual_user_id) != user_id:
+            await callback.answer(
+                "❌ Buyurtma egasi ma'lumoti mos kelmadi.",
+                show_alert=True,
+            )
+            return
+
+        if new_status not in allowed_transitions.get(current_status, set()):
+            await callback.answer(
+                "⚠️ Buyurtma holati allaqachon o'zgargan yoki bu amal mumkin emas.",
+                show_alert=True,
+            )
+            return
+
+        await db.execute(
+            "UPDATE orders SET status = ? WHERE id = ?",
+            (new_status, order_id),
+        )
+        await db.commit()
+
+    # Admin xabaridagi tugmalarni yangi statusga moslab yangilash.
+    try:
+        old_text = callback.message.text or callback.message.caption or ""
+        updated_text = (
+            old_text
+            + f"\n\n{label} — {datetime.now().strftime('%H:%M')}"
+        )
         await callback.message.edit_text(
-            callback.message.text + f"\n\n{label} — {datetime.now().strftime('%H:%M')}",
+            updated_text,
+            parse_mode="HTML",
+            reply_markup=admin_order_keyboard(order_id, user_id, new_status),
+        )
+    except Exception:
+        logger.exception(
+            "Admin xabarini yangilashda xato (buyurtma #%s).",
+            order_id,
+        )
+
+    # Status o'zgargandan so'ng mijozga tegishli xabarni yuborish.
+    try:
+        await bot.send_message(
+            user_id,
+            f"{user_msg}\n🧾 Buyurtma #{order_id}\n\nSavollar: {ADMIN_USERNAME}",
             parse_mode="HTML",
         )
     except Exception:
-        pass
+        logger.exception(
+            "Buyurtma #%s bo'yicha mijozga xabar yuborilmadi.",
+            order_id,
+        )
+
+    await callback.answer(label, show_alert=True)
 
 
 @dp.callback_query(F.data.startswith("admin_confirm:"))
