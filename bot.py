@@ -58,11 +58,11 @@ if not TOKEN:
     raise RuntimeError("BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan. Tokenni kodga yozmang.")
 ADMIN_ID       = 6722242402
 ADMIN_USERNAME = "@admoyin_lvl"
-ADMIN_PHONE    = "+998931407381"
+ADMIN_PHONE    = "+998950714664"
 
 CARD_HOLDER = "Mustafayev Jonibek"
-HUMO_CARD   = "9860 1701 3065 6763"
-VISA_CARD   = "4023 0602 0575 2529"
+HUMO_CARD   = "9860 1606 4184 4008"
+UZUM_CARD   = "4916 9903 2538 3294"
 
 FLOOD_LIMIT      = 5
 FLOOD_INTERVAL   = 3
