@@ -236,7 +236,7 @@ def apply_promo(total: int, code: str) -> tuple:
 def format_order_row(row) -> str:
     # row[10] = status indeksi
     status_col = row[10] if len(row) > 10 else "yangi"
-    emoji = {"yangi": "🆕", "tasdiqlandi": "✅", "yuborildi": "🚚", "bekor qilindi": "❌"}.get(status_col, "📌")
+    emoji = {"yangi": "🆕", "tasdiqlandi": "✅", "yuborildi": "🚚", "yetkazildi": "📬", "mijoz qabul qilmadi": "↩️", "bekor qilindi": "❌"}.get(status_col, "📌")
     return (
         f"━━━━━━━━━━━━━━━━\n"
         f"🧾 Buyurtma #{row[0]}\n"
@@ -260,7 +260,14 @@ def main_menu_keyboard(uid: int) -> ReplyKeyboardMarkup:
         [KeyboardButton(text="📚 Kitoblar"),     KeyboardButton(text="🔍 Qidirish")],
         [KeyboardButton(text=cart_txt),           KeyboardButton(text=wl_txt)],
         [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="💬 Fikr")],
-        [KeyboardButton(text="🎟️ Promo kod"),    KeyboardButton(text="ℹ️ Aloqa")],
+        [KeyboardButton(text="🧭 Kitob tanlash"), KeyboardButton(text="📔 Mutolaa kundaligi")],
+        [KeyboardButton(text="🎁 To'plamlar"), KeyboardButton(text="👥 Do'st taklif qilish")],
+        [KeyboardButton(text="💡 Kun hikmati"), KeyboardButton(text="🎟️ Promo kod")],
+        [KeyboardButton(text="🎲 Kitob ruletkasi"), KeyboardButton(text="🎮 Bilim viktorinasi")],
+        [KeyboardButton(text="🔥 Mutolaa marafoni"), KeyboardButton(text="🏆 Mening profilim")],
+        [KeyboardButton(text="💝 Kayfiyatga qarab"), KeyboardButton(text="🥇 Kitobxonlar reytingi")],
+        [KeyboardButton(text="🔔 Mutolaa eslatmasi")],
+        [KeyboardButton(text="ℹ️ Aloqa")],
     ], resize_keyboard=True)
 
 def admin_menu_keyboard() -> ReplyKeyboardMarkup:
@@ -270,6 +277,7 @@ def admin_menu_keyboard() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="➕ Kitob qo'shish"),     KeyboardButton(text="📋 Kitoblar (Admin)")],
         [KeyboardButton(text="📊 Admin panel"),        KeyboardButton(text="📣 Xabar yuborish")],
         [KeyboardButton(text="🎟️ Promo yaratish"),    KeyboardButton(text="📑 Promolar")],
+        [KeyboardButton(text="📦 Ombor"), KeyboardButton(text="🎁 To'plamlar")],
     ], resize_keyboard=True)
 
 def get_main_menu(uid: int) -> ReplyKeyboardMarkup:
@@ -306,6 +314,7 @@ cancel_keyboard = ReplyKeyboardMarkup(
 def promo_skip_keyboard() -> ReplyKeyboardMarkup:
     """Promo ekranda FAQAT tugma — matn yozish kerak emas."""
     return ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="⭐ Ball ishlatish")],
         [KeyboardButton(text="⏭️ O'tkazib yuborish")],
         [KeyboardButton(text="❌ Bekor qilish")],
     ], resize_keyboard=True, one_time_keyboard=True)
@@ -369,6 +378,8 @@ def book_detail_keyboard(bid: str, uid: int) -> InlineKeyboardMarkup:
     wl_text = "💔 Wishlistdan chiqarish" if bid in wl else "❤️ Wishlistga qo'shish"
     rows.append([InlineKeyboardButton(text=wl_text, callback_data=f"wl_toggle:{bid}")])
     rows.append([InlineKeyboardButton(text="⭐ Baholash", callback_data=f"rate:{bid}")])
+    rows.append([InlineKeyboardButton(text="📔 O'qiyapman", callback_data=f"reading_set:{bid}:oqilyapti"), InlineKeyboardButton(text="✅ O'qidim", callback_data=f"reading_set:{bid}:oqildi")])
+    rows.append([InlineKeyboardButton(text="📝 O'qimoqchiman", callback_data=f"reading_set:{bid}:reja")])
     rows.append([InlineKeyboardButton(text="⬅️ Orqaga",  callback_data="back:books")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -395,18 +406,37 @@ def cart_keyboard(uid: int) -> InlineKeyboardMarkup:
         rows.append([InlineKeyboardButton(text="📦 Buyurtma berish", callback_data="order_cart")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def admin_order_keyboard(order_id: int, uid: int, status: str = "yangi") -> InlineKeyboardMarkup | None:
-    """Admin tugmalari faqat buyurtmaning hozirgi holatiga mos ko'rsatiladi."""
+def admin_order_keyboard(
+    order_id: int,
+    uid: int,
+    status: str = "yangi",
+) -> InlineKeyboardMarkup:
+    """Buyurtma holatiga mos admin tugmalarini qaytaradi."""
     if status == "yangi":
         rows = [[
-            InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"admin_confirm:{order_id}:{uid}"),
-            InlineKeyboardButton(text="❌ Rad etish", callback_data=f"admin_cancel:{order_id}:{uid}"),
+            InlineKeyboardButton(
+                text="✅ Tasdiqlash",
+                callback_data=f"admin_confirm:{order_id}:{uid}",
+            ),
+            InlineKeyboardButton(
+                text="❌ Bekor qilish",
+                callback_data=f"admin_cancel:{order_id}:{uid}",
+            ),
         ]]
     elif status == "tasdiqlandi":
-        rows = [[InlineKeyboardButton(text="🚚 Yuborildi", callback_data=f"admin_sent:{order_id}:{uid}")]]
+        rows = [[
+            InlineKeyboardButton(text="🚚 Yuborildi", callback_data=f"admin_sent:{order_id}:{uid}"),
+            InlineKeyboardButton(text="❌ Bekor qilish", callback_data=f"admin_cancel:{order_id}:{uid}"),
+        ]]
+    elif status == "yuborildi":
+        rows = [[
+            InlineKeyboardButton(text="✅ Yetkazildi", callback_data=f"admin_delivered:{order_id}:{uid}"),
+            InlineKeyboardButton(text="↩️ Mijoz qabul qilmadi", callback_data=f"admin_refused:{order_id}:{uid}"),
+        ]]
     else:
-        # yuborildi yoki bekor qilindi: faol tugmalar bo'lmaydi
-        return None
+        # Yuborilgan yoki bekor qilingan buyurtmada faol tugma bo'lmaydi.
+        rows = []
+
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def promo_type_keyboard() -> ReplyKeyboardMarkup:
@@ -499,10 +529,64 @@ async def init_db():
                 book_id TEXT NOT NULL,
                 PRIMARY KEY (user_id, book_id)
             );
+            CREATE TABLE IF NOT EXISTS reading_log (
+                user_id INTEGER NOT NULL, book_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'reja', updated_at TEXT NOT NULL,
+                PRIMARY KEY(user_id, book_id)
+            );
+            CREATE TABLE IF NOT EXISTS bundles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '', price INTEGER NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS bundle_items (
+                bundle_id INTEGER NOT NULL, book_id TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY(bundle_id, book_id)
+            );
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS referrals (
+                inviter_id INTEGER NOT NULL, invited_id INTEGER NOT NULL UNIQUE,
+                created_at TEXT NOT NULL, rewarded INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS stock_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, book_id TEXT NOT NULL,
+                change_qty INTEGER NOT NULL, reason TEXT NOT NULL, created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS reading_checkins (
+                user_id INTEGER NOT NULL, checkin_date TEXT NOT NULL,
+                minutes INTEGER NOT NULL DEFAULT 10, created_at TEXT NOT NULL,
+                PRIMARY KEY(user_id, checkin_date)
+            );
+            CREATE TABLE IF NOT EXISTS daily_quiz (
+                user_id INTEGER NOT NULL, quiz_date TEXT NOT NULL,
+                q_index INTEGER NOT NULL DEFAULT 0, score INTEGER NOT NULL DEFAULT 0,
+                finished INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(user_id, quiz_date)
+            );
+            CREATE TABLE IF NOT EXISTS reminder_settings (
+                user_id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0,
+                last_sent_date TEXT
+            );
             CREATE INDEX IF NOT EXISTS idx_orders_user   ON orders(user_id);
             CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
         """)
         # quantity ustuni mavjud emasligini tekshirib qo'shamiz (eski DB uchun)
+        # Eski bazalar uchun xavfsiz, takroran ishlaydigan migratsiyalar.
+        for sql in (
+            "ALTER TABLE books ADD COLUMN category TEXT NOT NULL DEFAULT 'Boshqa'",
+            "ALTER TABLE books ADD COLUMN stock INTEGER NOT NULL DEFAULT -1",
+            "ALTER TABLE users ADD COLUMN points INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN referred_by INTEGER",
+            "ALTER TABLE orders ADD COLUMN delivered_at TEXT",
+            "ALTER TABLE orders ADD COLUMN points_used INTEGER NOT NULL DEFAULT 0",
+        ):
+            try:
+                await db.execute(sql)
+            except Exception:
+                pass
         try:
             await db.execute("ALTER TABLE orders ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
         except Exception:
@@ -615,13 +699,6 @@ async def save_order(uid, username, full_name, phone, address,
     return oid
 
 
-async def get_order_status(order_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT status FROM orders WHERE id=?", (order_id,)) as cur:
-            row = await cur.fetchone()
-    return row[0] if row else None
-
-
 async def update_order_status(order_id: int, status: str):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("UPDATE orders SET status=? WHERE id=?", (status, order_id))
@@ -691,6 +768,25 @@ def _now() -> str:
 async def start_handler(message: Message, state: FSMContext):
     await state.clear()
     await register_user(message.from_user)
+    # /start ref_<telegram_id> orqali taklif qilgan mijozni bir marta qayd etamiz.
+    try:
+        parts = (message.text or "").split(maxsplit=1)
+        if len(parts) > 1 and parts[1].startswith("ref_"):
+            inviter = int(parts[1][4:])
+            invited = message.from_user.id
+            if inviter != invited:
+                async with aiosqlite.connect(DB_PATH) as db:
+                    async with db.execute("SELECT referred_by FROM users WHERE id=?", (invited,)) as cur:
+                        row = await cur.fetchone()
+                    if row and row[0] is None:
+                        async with db.execute("SELECT id FROM users WHERE id=?", (inviter,)) as cur:
+                            inviter_exists = await cur.fetchone()
+                        if inviter_exists:
+                            await db.execute("UPDATE users SET referred_by=? WHERE id=?", (inviter, invited))
+                            await db.execute("INSERT OR IGNORE INTO referrals(inviter_id,invited_id,created_at) VALUES(?,?,?)", (inviter, invited, _now()))
+                            await db.commit()
+    except Exception:
+        logger.exception("Referral havolasini qayd etishda xato")
     name = message.from_user.first_name or "Do'st"
     await message.answer(
         f"Assalomu alaykum, <b>{name}</b>! 👋\n\n"
@@ -729,6 +825,10 @@ async def books_handler(message: Message):
         reply_markup=books_keyboard(),
         parse_mode="HTML",
     )
+    await message.answer("Saralash:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💸 Arzonidan", callback_data="sort:price"),
+        InlineKeyboardButton(text="🆕 Yangilari", callback_data="sort:new"),
+    ],[InlineKeyboardButton(text="📚 Kategoriyalar", callback_data="categories")]]))
 
 
 # ═══════════════════════════════════════════════════
@@ -956,6 +1056,16 @@ async def page_cb(callback: CallbackQuery):
     await callback.answer()
 
 
+@dp.callback_query(F.data.startswith("sort:"))
+async def sort_books_cb(callback: CallbackQuery):
+    mode=callback.data.split(":",1)[1]
+    async with aiosqlite.connect(DB_PATH) as db:
+        order="price ASC" if mode=="price" else "created_at DESC"
+        async with db.execute(f"SELECT id FROM books ORDER BY {order}") as cur: ids=[r[0] for r in await cur.fetchall()]
+    ids=[bid for bid in ids if bid in BOOKS]
+    await callback.message.answer("📚 Saralangan kitoblar:",reply_markup=books_keyboard(source=ids))
+    await callback.answer()
+
 @dp.callback_query(F.data == "noop")
 async def noop_cb(callback: CallbackQuery):
     await callback.answer()
@@ -1056,7 +1166,7 @@ async def my_orders(message: Message):
         return
     await message.answer(f"📦 <b>Buyurtmalaringiz ({len(rows)} ta):</b>", parse_mode="HTML")
     for row in rows:
-        emoji = {"yangi": "🆕", "tasdiqlandi": "✅", "yuborildi": "🚚", "bekor qilindi": "❌"}.get(row[14], "📌")
+        emoji = {"yangi": "🆕", "tasdiqlandi": "✅", "yuborildi": "🚚", "yetkazildi": "📬", "mijoz qabul qilmadi": "↩️", "bekor qilindi": "❌"}.get(row[14], "📌")
         qty = row[16] if len(row) > 16 else 1
         promo_line = f"\n🎟️ Promo: {row[13]}" if row[13] else ""
         qty_line   = f"\n📦 Miqdor: {qty} ta" if qty > 1 else ""
@@ -1301,6 +1411,27 @@ async def get_promo(message: Message, state: FSMContext):
     promo_code = ""
     promo_desc = ""
 
+    # Ballar 100 ball = 5 000 so'm chegirma; buyurtma qiymatidan oshmaydi.
+    if message.text == "⭐ Ball ishlatish":
+        data = await state.get_data()
+        uid = message.from_user.id
+        if data.get("order_type") == "cart":
+            total = cart_total(uid)
+        else:
+            total = BOOKS.get(data.get("book_id", ""), {}).get("price", 0) * data.get("quantity", 1)
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT COALESCE(points,0) FROM users WHERE id=?", (uid,)) as cur:
+                row = await cur.fetchone()
+        points = row[0] if row else 0
+        use_points = min(points, (total // 5000) * 100)
+        discount = (use_points // 100) * 5000
+        if use_points < 100 or discount <= 0:
+            await message.answer("Ball ishlatish uchun kamida 100 ball va 5 000 so'mlik buyurtma kerak.", reply_markup=promo_skip_keyboard())
+            return
+        await state.update_data(points_to_use=use_points, points_discount=discount)
+        await message.answer(f"✅ {use_points} ball ishlatiladi. Chegirma: {fmt(discount)} so'm. Qolgan promo kodingiz bo'lsa yozing yoki o'tkazib yuboring.", reply_markup=promo_skip_keyboard())
+        return
+
     # ⏭️ tugmasi bosildi — o'tkazib yuborish
     if message.text != "⏭️ O'tkazib yuborish":
         code = message.text.strip().upper()
@@ -1362,12 +1493,62 @@ async def get_payment(message: Message, state: FSMContext):
 
     promo_code = data.get("promo_code", "")
     promo_desc = data.get("promo_desc", "")
+    # Birinchi buyurtmaga 10% avtomatik chegirma (promo kod bilan birga emas).
+    first_order_discount = 0
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM orders WHERE user_id=?", (uid,)) as cur:
+            prior_orders = (await cur.fetchone())[0]
     if promo_code:
-        final, _ = apply_promo(original, promo_code)
+        p = PROMO_CODES.get(promo_code, {})
+        if p and (p.get("max_uses", 0) <= 0 or p.get("uses", 0) < p.get("max_uses", 0)):
+            if p.get("type") == "percent":
+                final = max(0, original - int(original * p["discount"] / 100))
+            else:
+                final = max(0, original - min(original, p["discount"]))
+        else:
+            # Promo endi yaroqsiz bo'lsa, buyurtma narxini xavfsiz qayta hisoblaymiz.
+            promo_code = ""
+            promo_desc = ""
+            final = max(0, original - int(original * 0.10)) if prior_orders == 0 else original
+            if prior_orders == 0:
+                promo_desc = "🎉 Birinchi buyurtma chegirmasi: -10%"
+    elif prior_orders == 0:
+        first_order_discount = int(original * 0.10)
+        final = original - first_order_discount
+        promo_desc = "🎉 Birinchi buyurtma chegirmasi: -10%"
     else:
         final = original
 
-    await state.update_data(payment_method=pm, final_price=final, original_price=original)
+    # Savat aynan to'plam tarkibiga mos bo'lsa, avval maxsus narxni qo'llaymiz.
+    # Birinchi buyurtma chegirmasi yoki promo kod bilan birga qo'shib hisoblamaymiz.
+    bundle_applied = False
+    if data.get("order_type") == "cart" and not promo_code and prior_orders != 0:
+        cart_now = {k: int(v) for k, v in get_cart(uid).items() if k in BOOKS}
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT id,price FROM bundles WHERE active=1") as cur:
+                bundle_rows = await cur.fetchall()
+            for bundle_id, bundle_price in bundle_rows:
+                async with db.execute("SELECT book_id,quantity FROM bundle_items WHERE bundle_id=?", (bundle_id,)) as cur:
+                    bundle_items = {r[0]: int(r[1]) for r in await cur.fetchall()}
+                if bundle_items and bundle_items == cart_now:
+                    final = max(0, int(bundle_price))
+                    promo_desc = f"🎁 To'plam narxi qo'llandi: {fmt(bundle_price)} so'm"
+                    bundle_applied = True
+                    break
+
+    # Faqat amalda qo'llangan chegirmaga mos ballni yechamiz:
+    # 100 ball = 5 000 so'm. Chegirma buyurtma narxidan oshmaydi.
+    requested_points_discount = max(0, int(data.get("points_discount", 0) or 0))
+    points_discount = min(requested_points_discount, final)
+    points_to_use_actual = (points_discount // 5000) * 100
+    points_discount = points_to_use_actual // 100 * 5000
+    final = max(0, final - points_discount)
+    if points_discount:
+        promo_desc += f"\n⭐ Ball chegirmasi: -{fmt(points_discount)} so'm"
+    await state.update_data(
+        payment_method=pm, final_price=final, original_price=original,
+        points_to_use=points_to_use_actual, promo_code=promo_code, promo_desc=promo_desc,
+    )
 
     if pm in ("Humo", "Visa"):
         card = HUMO_CARD if pm == "Humo" else VISA_CARD
@@ -1438,7 +1619,7 @@ async def complete_order(message: Message, state: FSMContext, has_check: bool = 
                 continue
             b = BOOKS[bid]
             ratio      = (b["price"] * qty) / original_price if original_price else 1
-            item_price = round(final_price * ratio) if promo_code else b["price"] * qty
+            item_price = round(final_price * ratio) if final_price != original_price else b["price"] * qty
             book_lines += f"  📖 {b['name']} ×{qty} = {fmt(b['price']*qty)} so'm\n"
             tasks.append(save_order(
                 uid=uid, username=message.from_user.username,
@@ -1452,7 +1633,7 @@ async def complete_order(message: Message, state: FSMContext, has_check: bool = 
         CARTS.pop(uid, None)
         first_oid = order_ids[0] if order_ids else 0
 
-        promo_line = f"\n🎟️ Promo: {promo_code}" if promo_code else ""
+        promo_line = f"\n🎟️ Promo: {promo_code}" if promo_code else (f"\n{data.get('promo_desc', '')}" if data.get("promo_desc") else "")
         ids_str    = ", #".join(str(i) for i in order_ids)
         admin_text = (
             f"🛒 <b>Yangi savatcha buyurtma</b>\n"
@@ -1497,7 +1678,7 @@ async def complete_order(message: Message, state: FSMContext, has_check: bool = 
         first_oid = oid
 
         qty_line   = f"📦 Miqdor: {qty} ta\n" if qty > 1 else ""
-        promo_line = f"\n🎟️ Promo: {promo_code}" if promo_code else ""
+        promo_line = f"\n🎟️ Promo: {promo_code}" if promo_code else (f"\n{data.get('promo_desc', '')}" if data.get("promo_desc") else "")
         admin_text = (
             f"🛒 <b>Yangi buyurtma #{oid}</b>\n"
             f"━━━━━━━━━━━━━━━━\n"
@@ -1524,12 +1705,43 @@ async def complete_order(message: Message, state: FSMContext, has_check: bool = 
             f"Savollar: {ADMIN_USERNAME}"
         )
 
-    # Admin ga yuborish
-    await safe_send(bot.send_message(
-        ADMIN_ID, admin_text,
-        reply_markup=admin_order_keyboard(first_oid, uid),
-        parse_mode="HTML",
-    ))
+    # Ballar faqat buyurtma yuborilganda yechiladi; bekor qilinsa admin amalida qaytariladi.
+    points_used = int(data.get("points_to_use", 0) or 0)
+    if points_used and order_ids:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT COALESCE(points,0) FROM users WHERE id=?", (uid,)) as cur:
+                prow = await cur.fetchone()
+            available = int(prow[0]) if prow else 0
+            points_used = min(points_used, available)
+            await db.execute("UPDATE users SET points=MAX(0,COALESCE(points,0)-?) WHERE id=?", (points_used, uid))
+            # Refundni bir marta bajarish uchun faqat birinchi orderga yozamiz.
+            await db.execute("UPDATE orders SET points_used=? WHERE id=?", (points_used, order_ids[0]))
+            await db.commit()
+
+    # Admin uchun har bir kitob buyurtmasi alohida boshqariladi.
+    # Savatdagi barcha buyurtmalar uchun alohida status tugmalari chiqadi.
+    if order_type == "cart":
+        for oid in order_ids:
+            async with aiosqlite.connect(DB_PATH) as db:
+                async with db.execute("SELECT book_name, quantity, price, payment_method, status FROM orders WHERE id=?", (oid,)) as cur:
+                    item_row = await cur.fetchone()
+            if not item_row:
+                continue
+            item_name, item_qty, item_price, item_payment, item_status = item_row
+            individual = (
+                f"🛒 <b>Yangi buyurtma #{oid}</b>\n━━━━━━━━━━━━━━━━\n"
+                f"👤 @{message.from_user.username or 'yoq'} (ID: {uid})\n"
+                f"🙍 {full_name} | 📞 {phone}\n🏠 {address}\n"
+                f"📖 {item_name} ×{item_qty}\n💰 <b>{fmt(item_price)} so'm</b>\n"
+                f"💳 {item_payment} | Holat: {item_status}\n🕒 {_now()}"
+            )
+            await safe_send(bot.send_message(ADMIN_ID, individual, reply_markup=admin_order_keyboard(oid, uid, item_status), parse_mode="HTML"))
+    else:
+        await safe_send(bot.send_message(
+            ADMIN_ID, admin_text,
+            reply_markup=admin_order_keyboard(first_oid, uid),
+            parse_mode="HTML",
+        ))
 
     if has_check:
         if message.photo:
@@ -1772,10 +1984,9 @@ async def admin_orders(message: Message):
             f"💳 {row[8]} | 📌 {row[14]}\n"
             f"🕒 {row[15]}"
         )
-        status = row[14] if len(row) > 14 else "yangi"
         await message.answer(
             text,
-            reply_markup=admin_order_keyboard(row[0], row[1], status),
+            reply_markup=admin_order_keyboard(row[0], row[1], row[14]),
             parse_mode="HTML"
         )
 
@@ -1956,69 +2167,139 @@ async def promos_list(message: Message):
 # ═══════════════════════════════════════════════════
 #  ADMIN — STATUS BOSHQARUVI
 # ═══════════════════════════════════════════════════
-async def _admin_status_action(callback: CallbackQuery, new_status: str, label: str, user_msg: str):
+async def _admin_status_action(
+    callback: CallbackQuery,
+    new_status: str,
+    label: str,
+    user_msg: str,
+):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("❌ Admin emassiz.", show_alert=True)
         return
 
+    # Callback ma'lumotlarini tekshirish.
     try:
-        _, order_id_raw, user_id_raw = callback.data.split(":", 2)
-        order_id = int(order_id_raw)
-        user_id = int(user_id_raw)
-    except (ValueError, TypeError):
-        await callback.answer("❌ Buyurtma ma'lumoti noto'g'ri.", show_alert=True)
-        return
-
-    current_status = await get_order_status(order_id)
-    if current_status is None:
-        await callback.answer("❌ Buyurtma topilmadi.", show_alert=True)
-        return
-
-    # Faqat ruxsat etilgan ketma-ketlik: yangi -> tasdiqlandi -> yuborildi.
-    allowed = {
-        "tasdiqlandi": {"yangi"},
-        "bekor qilindi": {"yangi", "tasdiqlandi"},
-        "yuborildi": {"tasdiqlandi"},
-    }
-    if current_status not in allowed.get(new_status, set()):
+        parts = callback.data.split(":")
+        order_id = int(parts[1])
+        user_id = int(parts[2])
+    except (ValueError, IndexError, AttributeError):
         await callback.answer(
-            f"Bu amal hozir mumkin emas. Buyurtma holati: {current_status}.",
+            "❌ Buyurtma ma'lumoti noto'g'ri.",
             show_alert=True,
         )
-        # Eski tugmalarni ham amaldagi holatga moslab yangilash.
-        try:
-            await callback.message.edit_reply_markup(
-                reply_markup=admin_order_keyboard(order_id, user_id, current_status)
-            )
-        except Exception:
-            pass
         return
 
-    await update_order_status(order_id, new_status)
-    await safe_send(bot.send_message(
-        user_id,
-        f"{user_msg}\n🧾 Buyurtma #{order_id}\n\nSavollar: {ADMIN_USERNAME}",
-        parse_mode="HTML",
-    ))
-    await callback.answer(label, show_alert=True)
+    # Faqat belgilangan ketma-ketlikda status o'zgarishiga ruxsat beriladi.
+    allowed_transitions = {
+        "yangi": {"tasdiqlandi", "bekor qilindi"},
+        "tasdiqlandi": {"yuborildi", "bekor qilindi"},
+        "yuborildi": {"yetkazildi", "mijoz qabul qilmadi"},
+    }
 
-    # Xabar matnini saqlab, faqat keyingi bosqich tugmalarini ko'rsatamiz.
+    # Statusni tekshirish va yangilash bitta DB ulanishida bajariladi.
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT user_id, status FROM orders WHERE id = ?",
+            (order_id,),
+        ) as cur:
+            order = await cur.fetchone()
+
+        if not order:
+            await callback.answer(
+                "❌ Buyurtma topilmadi.",
+                show_alert=True,
+            )
+            return
+
+        actual_user_id, current_status = order
+
+        # Callbackdagi foydalanuvchi ID'si buyurtma egasiga mosligini tekshirish.
+        if int(actual_user_id) != user_id:
+            await callback.answer(
+                "❌ Buyurtma egasi ma'lumoti mos kelmadi.",
+                show_alert=True,
+            )
+            return
+
+        if new_status not in allowed_transitions.get(current_status, set()):
+            await callback.answer(
+                "⚠️ Buyurtma holati allaqachon o'zgargan yoki bu amal mumkin emas.",
+                show_alert=True,
+            )
+            return
+
+        await db.execute("UPDATE orders SET status = ?, delivered_at = CASE WHEN ?='yetkazildi' THEN ? ELSE delivered_at END WHERE id = ?", (new_status, new_status, _now(), order_id))
+        # Zaxira faqat admin buyurtmani tasdiqlaganda kamayadi; bekor qilishda qaytariladi.
+        async with db.execute("SELECT book_id, quantity FROM orders WHERE id=?", (order_id,)) as cur:
+            stock_order = await cur.fetchone()
+        if stock_order and new_status == "tasdiqlandi":
+            book_id, qty = stock_order
+            async with db.execute("SELECT stock FROM books WHERE id=?", (book_id,)) as cur:
+                sr = await cur.fetchone()
+            if sr and sr[0] >= 0:
+                if sr[0] < qty:
+                    await db.rollback()
+                    await callback.answer("❌ Omborda yetarli kitob yo'q. Qoldiqni yangilang.", show_alert=True)
+                    return
+                await db.execute("UPDATE books SET stock=stock-? WHERE id=?", (qty, book_id))
+                await db.execute("INSERT INTO stock_log(book_id,change_qty,reason,created_at) VALUES(?,?,?,?)", (book_id,-qty,f"Buyurtma #{order_id} tasdiqlandi",_now()))
+        if stock_order and new_status == "bekor qilindi" and current_status == "tasdiqlandi":
+            book_id, qty = stock_order
+            await db.execute("UPDATE books SET stock=CASE WHEN stock < 0 THEN stock ELSE stock+? END WHERE id=?", (qty, book_id))
+        if new_status == "bekor qilindi":
+            async with db.execute("SELECT user_id, COALESCE(points_used,0) FROM orders WHERE id=?", (order_id,)) as cur:
+                used_row = await cur.fetchone()
+            if used_row and used_row[1] > 0:
+                await db.execute("UPDATE users SET points=COALESCE(points,0)+? WHERE id=?", (used_row[1], used_row[0]))
+                await db.execute("UPDATE orders SET points_used=0 WHERE id=?", (order_id,))
+        if new_status == "yetkazildi":
+            async with db.execute("SELECT user_id, price FROM orders WHERE id=?", (order_id,)) as cur:
+                delivered = await cur.fetchone()
+            if delivered:
+                points = max(1, int(max(0, delivered[1]) // 10000))
+                await db.execute("UPDATE users SET points=COALESCE(points,0)+? WHERE id=?", (points, delivered[0]))
+                async with db.execute("SELECT referred_by FROM users WHERE id=?", (delivered[0],)) as cur:
+                    refrow = await cur.fetchone()
+                if refrow and refrow[0]:
+                    async with db.execute("SELECT rewarded FROM referrals WHERE invited_id=?", (delivered[0],)) as cur:
+                        rr = await cur.fetchone()
+                    if rr and not rr[0]:
+                        await db.execute("UPDATE users SET points=COALESCE(points,0)+5 WHERE id=?", (refrow[0],))
+                        await db.execute("UPDATE referrals SET rewarded=1 WHERE invited_id=?", (delivered[0],))
+        await db.commit()
+
+    # Admin xabaridagi tugmalarni yangi statusga moslab yangilash.
     try:
-        original_text = callback.message.text or callback.message.caption or ""
+        old_text = callback.message.text or callback.message.caption or ""
+        updated_text = (
+            old_text
+            + f"\n\n{label} — {datetime.now().strftime('%H:%M')}"
+        )
         await callback.message.edit_text(
-            original_text + f"\n\n{label} — {datetime.now().strftime('%H:%M')}",
+            updated_text,
+            parse_mode="HTML",
             reply_markup=admin_order_keyboard(order_id, user_id, new_status),
+        )
+    except Exception:
+        logger.exception(
+            "Admin xabarini yangilashda xato (buyurtma #%s).",
+            order_id,
+        )
+
+    # Status o'zgargandan so'ng mijozga tegishli xabarni yuborish.
+    try:
+        await bot.send_message(
+            user_id,
+            f"{user_msg}\n🧾 Buyurtma #{order_id}\n\nSavollar: {ADMIN_USERNAME}",
             parse_mode="HTML",
         )
-    except TelegramBadRequest:
-        try:
-            await callback.message.edit_reply_markup(
-                reply_markup=admin_order_keyboard(order_id, user_id, new_status)
-            )
-        except Exception:
-            pass
     except Exception:
-        pass
+        logger.exception(
+            "Buyurtma #%s bo'yicha mijozga xabar yuborilmadi.",
+            order_id,
+        )
+
+    await callback.answer(label, show_alert=True)
 
 
 @dp.callback_query(F.data.startswith("admin_confirm:"))
@@ -2045,6 +2326,530 @@ async def admin_cancel_cb(callback: CallbackQuery):
     )
 
 
+
+# ═══════════════════════════════════════════════════
+#  TAQWOBOOK — QO'SHIMCHA FUNKSIYALAR
+# ═══════════════════════════════════════════════════
+CATEGORIES = ["Qur'on va tafsir", "Hadis", "Siyrat", "Aqida", "Odob-axloq", "Bolalar uchun", "Boshqa"]
+
+@dp.message(F.text == "🧭 Kitob tanlash")
+async def book_guide(message: Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🌱 Islomni endi o'rganayotganlar", callback_data="guide:beginner")],
+        [InlineKeyboardButton(text="👨‍👩‍👧 Ota-onalar", callback_data="guide:parents")],
+        [InlineKeyboardButton(text="🧑 Yoshlar", callback_data="guide:youth")],
+        [InlineKeyboardButton(text="🧒 Bolalar", callback_data="guide:children")],
+        [InlineKeyboardButton(text="📚 Barcha kategoriyalar", callback_data="categories")],
+    ])
+    await message.answer("🧭 <b>Sizga mos kitobni topamiz</b>\nKim uchun kitob izlayapsiz?", reply_markup=kb, parse_mode="HTML")
+
+@dp.callback_query(F.data.startswith("guide:"))
+async def guide_result(callback: CallbackQuery):
+    topic = callback.data.split(":", 1)[1]
+    keywords = {
+        "beginner": ["aqida", "odob", "asos", "islom", "namoz"],
+        "parents": ["tarbiya", "ota", "ona", "farzand", "oila"],
+        "youth": ["yosh", "siyrat", "odob", "tarbiya"],
+        "children": ["bola", "bolalar", "ertak", "tarbiya"],
+    }.get(topic, [])
+    results = [bid for bid, b in BOOKS.items() if any(k in (b.get("name","")+" "+b.get("description","")+" "+b.get("category","")).lower() for k in keywords)]
+    if not results:
+        results = [bid for bid, b in BOOKS.items() if b.get("category") == ("Bolalar uchun" if topic == "children" else "Odob-axloq")]
+    await callback.message.answer("📚 Tavsiyalar:" if results else "Hozircha aniq mos kitob topilmadi. Kategoriyalarni ko'rib chiqing.", reply_markup=books_keyboard(source=results) if results else None)
+    await callback.answer()
+
+@dp.callback_query(F.data == "categories")
+async def categories_cb(callback: CallbackQuery):
+    rows=[]
+    for cat in CATEGORIES:
+        rows.append([InlineKeyboardButton(text=cat, callback_data="cat:"+cat)])
+    await callback.message.answer("📚 Kategoriyani tanlang:", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("cat:"))
+async def category_cb(callback: CallbackQuery):
+    cat=callback.data[4:]
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT id FROM books WHERE category=? ORDER BY created_at DESC", (cat,)) as cur:
+            ids=[r[0] for r in await cur.fetchall()]
+    ids=[bid for bid in ids if bid in BOOKS]
+    await callback.message.answer(f"📚 {cat}: {len(ids)} ta kitob", reply_markup=books_keyboard(source=ids) if ids else None)
+    await callback.answer()
+
+@dp.message(F.text == "📔 Mutolaa kundaligi")
+async def reading_diary(message: Message):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT book_id,status,updated_at FROM reading_log WHERE user_id=? ORDER BY updated_at DESC", (message.from_user.id,)) as cur:
+            rows=await cur.fetchall()
+    lines=["📔 <b>Mutolaa kundaligingiz</b>", "Kitob sahifasida quyidagi tugmalar orqali ro'yxatga qo'shishingiz mumkin:", ""]
+    for bid,status,updated in rows[:30]:
+        lines.append(f"{'✅' if status=='oqildi' else '📖' if status=='oqilyapti' else '📝'} {BOOKS.get(bid,{}).get('name',bid)} — {status} ({updated[:10]})")
+    kb=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📚 Kitob tanlash", callback_data="reading:pick")],
+        [InlineKeyboardButton(text="🎯 Haftalik maqsad", callback_data="reading:goal")],
+    ])
+    await message.answer("\n".join(lines), reply_markup=kb, parse_mode="HTML")
+
+@dp.callback_query(F.data == "reading:pick")
+async def reading_pick(callback: CallbackQuery):
+    await callback.message.answer("Mutolaa ro'yxatiga qo'shish uchun kitobni tanlang:", reply_markup=books_keyboard())
+    await callback.answer()
+
+@dp.callback_query(F.data == "reading:goal")
+async def reading_goal(callback: CallbackQuery):
+    await callback.message.answer("🎯 Haftalik tavsiya: 3 kun, kuniga 10–15 daqiqadan mutolaa qiling. Maqsadni bajarganingizda kundalikda o'qilgan kitobni belgilang.")
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("reading_set:"))
+async def reading_set(callback: CallbackQuery):
+    _,bid,status=callback.data.split(":",2)
+    if bid not in BOOKS:
+        await callback.answer("Kitob topilmadi", show_alert=True); return
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT INTO reading_log(user_id,book_id,status,updated_at) VALUES(?,?,?,?) ON CONFLICT(user_id,book_id) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at", (callback.from_user.id,bid,status,_now()))
+        await db.commit()
+    await callback.answer("Mutolaa kundaligi yangilandi")
+
+@dp.message(F.text == "👥 Do'st taklif qilish")
+async def invite_friends(message: Message):
+    me=await bot.get_me()
+    link=f"https://t.me/{me.username}?start=ref_{message.from_user.id}"
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM referrals WHERE inviter_id=?", (message.from_user.id,)) as cur:
+            count=(await cur.fetchone())[0]
+    await message.answer(f"👥 <b>Do'stingizni TAQWOBOOK'ga taklif qiling</b>\n\nSizning havolangiz:\n<code>{link}</code>\n\nTakliflar: {count}\n🎁 Bonus taklif qilingan do'st birinchi buyurtmasini olgach beriladi.", parse_mode="HTML")
+
+@dp.message(F.text == "💡 Kun hikmati")
+async def daily_wisdom(message: Message):
+    await message.answer("💡 <b>Kun hikmati</b>\n\nBugungi kichik vazifa: har kuni oz bo'lsa ham foydali ilmga vaqt ajrating. O'qiyotgan kitobingizdan bir fikrni yozib qo'ying.\n\n📚 Mutolaa uchun kitob tanlash: «Kitoblar» bo'limi.\n\nEslatma: manbasi tekshirilmagan diniy iqtiboslar hadis yoki oyat sifatida berilmaydi.", parse_mode="HTML")
+
+@dp.message(F.text == "🎁 To'plamlar")
+async def bundles_list(message: Message):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT id,name,description,price FROM bundles WHERE active=1 ORDER BY id DESC") as cur:
+            rows=await cur.fetchall()
+    if not rows:
+        await message.answer("🎁 Hozircha tayyor to'plamlar yo'q. Admin keyinroq qo'shishi mumkin.")
+        return
+    for bid,name,desc,price in rows:
+        await message.answer(f"🎁 <b>{name}</b>\n{desc}\n💰 {fmt(price)} so'm", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="📚 Tarkibini ko'rish",callback_data=f"bundle:{bid}")]]))
+
+@dp.callback_query(F.data.startswith("bundle:"))
+async def bundle_detail(callback: CallbackQuery):
+    try: bundle_id=int(callback.data.split(":",1)[1])
+    except ValueError: await callback.answer("Noto'g'ri to'plam"); return
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT name,description,price FROM bundles WHERE id=? AND active=1",(bundle_id,)) as cur: b=await cur.fetchone()
+        async with db.execute("SELECT book_id,quantity FROM bundle_items WHERE bundle_id=?",(bundle_id,)) as cur: items=await cur.fetchall()
+    if not b: await callback.answer("To'plam topilmadi",show_alert=True); return
+    names=[f"• {BOOKS.get(bid,{}).get('name',bid)} ×{q}" for bid,q in items]
+    await callback.message.answer(f"🎁 <b>{b[0]}</b>\n{b[1]}\n\n"+("\n".join(names) if names else "Tarkib hali kiritilmagan")+f"\n\n💰 To'plam narxi: {fmt(b[2])} so'm\nKitoblarni savatga qo'shib, odatdagi tartibda buyurtma berishingiz mumkin.",parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🛒 To'plamni savatga qo'shish",callback_data=f"bundle_add:{bundle_id}")]]))
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("bundle_add:"))
+async def bundle_add_cart(callback: CallbackQuery):
+    try: bundle_id=int(callback.data.split(":",1)[1])
+    except ValueError: await callback.answer("To'plam noto'g'ri",show_alert=True); return
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT book_id,quantity FROM bundle_items WHERE bundle_id=?",(bundle_id,)) as cur: items=await cur.fetchall()
+        async with db.execute("SELECT name FROM bundles WHERE id=? AND active=1",(bundle_id,)) as cur: bundle=await cur.fetchone()
+    if not bundle or not items:
+        await callback.answer("To'plam tarkibi hali kiritilmagan",show_alert=True); return
+    cart=CARTS.setdefault(callback.from_user.id,{})
+    for bid,qty in items:
+        if bid in BOOKS: cart[bid]=cart.get(bid,0)+qty
+    await save_cart_to_db(callback.from_user.id)
+    await callback.message.answer(f"✅ {bundle[0]} to'plami savatga qo'shildi. Narx savatdagi alohida kitoblar narxi bo'yicha hisoblanadi; maxsus to'plam narxi admin tomonidan alohida tasdiqlanadi.",reply_markup=cart_keyboard(callback.from_user.id))
+    await callback.answer("Savatga qo'shildi")
+
+@dp.message(Command("addbundle"))
+async def add_bundle_command(message: Message):
+    if message.from_user.id != ADMIN_ID: await message.answer("❌ Faqat admin uchun."); return
+    # Format: /addbundle Nomi | Tavsif | Narx | book_id:son,book_id:son
+    parts=(message.text or "").partition(" ")[2].split("|")
+    if len(parts)<4:
+        await message.answer("Format:\n/addbundle Nomi | Tavsif | Narx | book_id:son,book_id:son\nKitob ID'larini /stock bo'limidan tekshiring.")
+        return
+    name,desc,price_raw,items_raw=[x.strip() for x in parts[:4]]
+    try:
+        price=int(price_raw)
+        items=[]
+        for item in items_raw.split(","):
+            bid,qty=item.strip().split(":",1); qty=int(qty)
+            if bid not in BOOKS or qty<1: raise ValueError
+            items.append((bid,qty))
+        if price<0 or not name or not items: raise ValueError
+    except Exception:
+        await message.answer("❌ Narx yoki tarkib noto'g'ri. Misol: /addbundle Oila | Oila uchun | 120000 | kitob_id:1")
+        return
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur=await db.execute("INSERT INTO bundles(name,description,price,active,created_at) VALUES(?,?,?,1,?)",(name,desc,price,_now()))
+        bundle_id=cur.lastrowid
+        await db.executemany("INSERT INTO bundle_items(bundle_id,book_id,quantity) VALUES(?,?,?)",[(bundle_id,bid,qty) for bid,qty in items])
+        await db.commit()
+    await message.answer(f"✅ To'plam yaratildi: {name} (ID: {bundle_id})")
+
+@dp.message(Command("points"))
+async def points_command(message: Message):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COALESCE(points,0) FROM users WHERE id=?",(message.from_user.id,)) as cur: row=await cur.fetchone()
+    points=row[0] if row else 0
+    await message.answer(f"🎁 Sizda {points} bonus ball bor. Har bir yetkazilgan buyurtma uchun xarid summasiga qarab ball beriladi. Hozircha ballar admin orqali chegirmaga aylantiriladi; avtomatik yechish keyingi bosqichda sozlanishi mumkin.")
+
+@dp.message(F.text == "📦 Ombor")
+async def stock_admin(message: Message):
+    if message.from_user.id != ADMIN_ID: await message.answer("❌ Faqat admin uchun."); return
+    lines=["📦 <b>Ombor qoldig'i</b>"]
+    for bid,b in list(BOOKS.items())[:60]:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT stock,category FROM books WHERE id=?",(bid,)) as cur: row=await cur.fetchone()
+        stock=row[0] if row else -1
+        lines.append(f"• {b['name']} — {'cheklanmagan' if stock < 0 else str(stock)+' ta'} | {row[1] if row else 'Boshqa'}")
+    lines.append("\nQoldiq: /stock KITOB_ID MIQDOR (masalan: /stock abc123 15)\nKategoriya: /setcategory KITOB_ID kategoriya nomi")
+    await message.answer("\n".join(lines),parse_mode="HTML")
+
+@dp.message(Command("stock"))
+async def stock_command(message: Message):
+    if message.from_user.id != ADMIN_ID: await message.answer("❌ Faqat admin uchun."); return
+    parts=(message.text or "").split(maxsplit=2)
+    if len(parts)!=3: await message.answer("Ishlatish: /stock KITOB_ID MIQDOR\n-1 = cheklanmagan"); return
+    bid=parts[1]
+    try: qty=int(parts[2]); assert qty >= -1
+    except Exception: await message.answer("Miqdor -1 yoki 0 dan katta raqam bo'lishi kerak."); return
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur=await db.execute("UPDATE books SET stock=? WHERE id=?",(qty,bid)); await db.commit()
+    await message.answer("✅ Qoldiq yangilandi." if cur.rowcount else "❌ Kitob ID topilmadi.")
+    if cur.rowcount and qty >= 0 and qty <= 3:
+        book_name = BOOKS.get(bid, {}).get("name", bid)
+        await message.answer(f"⚠️ <b>Kam qoldiq ogohlantirishi</b>\n{book_name}: omborda {qty} ta qoldi.", parse_mode="HTML")
+
+@dp.message(Command("setcategory"))
+async def set_category_command(message: Message):
+    if message.from_user.id != ADMIN_ID: await message.answer("❌ Faqat admin uchun."); return
+    parts=(message.text or "").split(maxsplit=2)
+    if len(parts)!=3: await message.answer("Ishlatish: /setcategory KITOB_ID KATEGORIYA\nKategoriyalar: "+", ".join(CATEGORIES)); return
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur=await db.execute("UPDATE books SET category=? WHERE id=?",(parts[2],parts[1])); await db.commit()
+    await message.answer("✅ Kategoriya saqlandi." if cur.rowcount else "❌ Kitob ID topilmadi.")
+
+@dp.message(Command("backup"))
+async def backup_command(message: Message):
+    if message.from_user.id != ADMIN_ID: await message.answer("❌ Faqat admin uchun."); return
+    try:
+        import sqlite3
+        from datetime import date
+        backup_dir=Path(DB_PATH).expanduser().resolve().parent / "backups"
+        backup_dir.mkdir(parents=True,exist_ok=True)
+        target=backup_dir / f"orders-{date.today().isoformat()}.db"
+        src=sqlite3.connect(DB_PATH); dst=sqlite3.connect(target)
+        with dst: src.backup(dst)
+        dst.close(); src.close()
+        await message.answer(f"✅ Zaxira nusxa yaratildi: <code>{target.name}</code>\nEslatma: Railway qayta deployida saqlanishi uchun DB va backups papkasi persistent Volume ichida bo'lishi kerak.",parse_mode="HTML")
+    except Exception:
+        logger.exception("DB backup failed")
+        await message.answer("❌ Zaxira nusxa yaratilmadi. Bot logini tekshiring.")
+
+@dp.message(Command("export_orders"))
+async def export_orders(message: Message):
+    if message.from_user.id != ADMIN_ID: await message.answer("❌ Faqat admin uchun."); return
+    import csv, io
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT id,created_at,full_name,phone,address,book_name,quantity,price,payment_method,status FROM orders ORDER BY id DESC") as cur: rows=await cur.fetchall()
+    out=io.StringIO(); w=csv.writer(out); w.writerow(["ID","Sana","Mijoz","Telefon","Manzil","Kitob","Soni","Narx","To'lov","Holat"]); w.writerows(rows)
+    from aiogram.types import BufferedInputFile
+    await message.answer_document(BufferedInputFile(out.getvalue().encode('utf-8-sig'),filename="taqwobook_orders.csv"),caption="📊 Buyurtmalar eksporti")
+
+@dp.callback_query(F.data.startswith("admin_delivered:"))
+async def admin_delivered(callback: CallbackQuery):
+    await _admin_status_action(callback,"yetkazildi","✅ YETKAZILDI","✅ <b>Buyurtmangiz yetkazildi deb belgilandi.</b> Xaridingiz uchun rahmat!")
+
+@dp.callback_query(F.data.startswith("admin_refused:"))
+async def admin_refused(callback: CallbackQuery):
+    await _admin_status_action(callback,"mijoz qabul qilmadi","↩️ MIJOZ QABUL QILMADI","↩️ <b>Buyurtma bo'yicha yetkazib berish yakunlanmadi.</b> Tafsilotlarni kelishish uchun admin bilan bog'laning.")
+
+
+# ═══════════════════════════════════════════════════
+#  QIZIQARLI VA FOYDALI YANGI FUNKSIYALAR
+# ═══════════════════════════════════════════════════
+
+@dp.message(F.text == "🎲 Kitob ruletkasi")
+async def random_book(message: Message):
+    """Sotuvdagi kitoblardan tasodifiy kitob tanlaydi."""
+    import random
+    available = [(bid, b) for bid, b in BOOKS.items() if b.get("price", 0) >= 0]
+    if not available:
+        await message.answer("📭 Hozircha ruletka uchun kitob yo'q. Keyinroq yana urinib ko'ring!")
+        return
+    bid, book = random.choice(available)
+    rating = book.get("avg_rating", 0)
+    await message.answer(
+        f"🎲 <b>TAQWOBOOK ruletkasi siz uchun tanladi!</b>\n\n"
+        f"📖 <b>{book['name']}</b>\n✍️ Muallif: {book.get('author') or 'Ko‘rsatilmagan'}\n"
+        f"💰 Narxi: {fmt(book['price'])} so'm\n"
+        f"⭐ Reyting: {rating}/5\n\nBugun shu kitob bilan yangi bilim sari qadam qo'yasizmi?",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📘 Kitobni ko'rish", callback_data=f"book:{bid}")],
+            [InlineKeyboardButton(text="🎲 Yana tanlab ber", callback_data="random_book_again")],
+        ]),
+    )
+
+@dp.callback_query(F.data == "random_book_again")
+async def random_book_again(callback: CallbackQuery):
+    import random
+    available = [(bid, b) for bid, b in BOOKS.items()]
+    if not available:
+        await callback.answer("Kitoblar topilmadi", show_alert=True)
+        return
+    bid, book = random.choice(available)
+    await callback.message.answer(
+        f"🎲 Yangi tanlov: <b>{book['name']}</b>\n💰 {fmt(book['price'])} so'm",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="📘 Ko'rish", callback_data=f"book:{bid}")]])
+    )
+    await callback.answer("Yangi kitob tanlandi!")
+
+QUIZ_QUESTIONS = [
+    ("Kitob o'qishda eng foydali odatlardan biri qaysi?", ["Tushunmagan joyni belgilash", "Faqat tez o'qish", "Har safar chalg'ish"], 0),
+    ("Mutolaa kundaligi nima uchun kerak?", ["Kitoblarni yo'qotish uchun", "O'qish jarayoni va fikrlarni qayd etish uchun", "Narxlarni yashirish uchun"], 1),
+    ("Yangi kitob tanlayotganda nimaga qarash foydali?", ["Faqat muqovasiga", "Maqsad, tavsif va mavzusiga", "Faqat sahifa rangiga"], 1),
+    ("O'qigan narsani eslab qolishga nima yordam beradi?", ["Asosiy fikrlarni yozib borish", "Darhol unutishga urinish", "Kitobni ochmaslik"], 0),
+    ("Barqaror mutolaa uchun qaysi yo'l ma'qul?", ["Faqat yiliga bir marta", "Har kuni oz-ozdan vaqt ajratish", "Faqat kayfiyat bo'lsa"], 1),
+]
+
+async def show_quiz_question(target, uid: int, q_index: int):
+    question, options, correct = QUIZ_QUESTIONS[q_index]
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"{i+1}. {option}", callback_data=f"quizans:{q_index}:{i}")]
+        for i, option in enumerate(options)
+    ])
+    await target.answer(f"🎮 <b>Kunlik bilim viktorinasi</b> ({q_index+1}/{len(QUIZ_QUESTIONS)})\n\n{question}", reply_markup=kb, parse_mode="HTML")
+
+@dp.message(F.text == "🎮 Bilim viktorinasi")
+async def quiz_start(message: Message):
+    today = datetime.now().strftime("%Y-%m-%d")
+    uid = message.from_user.id
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT q_index,score,finished FROM daily_quiz WHERE user_id=? AND quiz_date=?", (uid,today)) as cur:
+            row = await cur.fetchone()
+        if row and row[2]:
+            await message.answer(f"🏁 Bugungi viktorinani allaqachon tugatgansiz! Natijangiz: {row[1]}/{len(QUIZ_QUESTIONS)}. Ertaga yana urinib ko'ring.")
+            return
+        if not row:
+            await db.execute("INSERT INTO daily_quiz(user_id,quiz_date,q_index,score,finished) VALUES(?,?,0,0,0)", (uid,today))
+            await db.commit()
+    await show_quiz_question(message, uid, 0)
+
+@dp.callback_query(F.data.startswith("quizans:"))
+async def quiz_answer(callback: CallbackQuery):
+    try:
+        _, q_raw, choice_raw = callback.data.split(":")
+        q_index, choice = int(q_raw), int(choice_raw)
+    except (ValueError, TypeError):
+        await callback.answer("Javobni o'qib bo'lmadi", show_alert=True); return
+    if q_index < 0 or q_index >= len(QUIZ_QUESTIONS):
+        await callback.answer("Savol topilmadi", show_alert=True); return
+    today = datetime.now().strftime("%Y-%m-%d")
+    uid = callback.from_user.id
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT q_index,score,finished FROM daily_quiz WHERE user_id=? AND quiz_date=?", (uid,today)) as cur:
+            row = await cur.fetchone()
+        if not row or row[2] or row[0] != q_index:
+            await callback.answer("Bu javob eskirgan yoki viktorina tugagan.", show_alert=True); return
+        score = row[1] + (1 if choice == QUIZ_QUESTIONS[q_index][2] else 0)
+        next_q = q_index + 1
+        if next_q >= len(QUIZ_QUESTIONS):
+            reward = score * 2
+            await db.execute("UPDATE daily_quiz SET q_index=?,score=?,finished=1 WHERE user_id=? AND quiz_date=?", (next_q,score,uid,today))
+            await db.execute("UPDATE users SET points=COALESCE(points,0)+? WHERE id=?", (reward,uid))
+            await db.commit()
+            result_text = f"🏁 <b>Viktorina yakunlandi!</b>\nNatija: <b>{score}/{len(QUIZ_QUESTIONS)}</b>\n🎁 Hisobingizga <b>{reward} ball</b> qo'shildi.\n\nErtaga yangi urinishda ko'rishamiz!"
+        else:
+            await db.execute("UPDATE daily_quiz SET q_index=?,score=? WHERE user_id=? AND quiz_date=?", (next_q,score,uid,today))
+            await db.commit()
+            result_text = "✅ To'g'ri!" if choice == QUIZ_QUESTIONS[q_index][2] else "💡 Bu safar bo'lmadi — keyingi savolga o'tamiz."
+    await callback.answer("Javob qabul qilindi")
+    if next_q >= len(QUIZ_QUESTIONS):
+        await callback.message.answer(result_text, parse_mode="HTML")
+    else:
+        await callback.message.answer(result_text)
+        await show_quiz_question(callback.message, uid, next_q)
+
+@dp.message(F.text == "🔥 Mutolaa marafoni")
+async def reading_marathon(message: Message):
+    today = datetime.now().strftime("%Y-%m-%d")
+    uid = message.from_user.id
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT minutes FROM reading_checkins WHERE user_id=? AND checkin_date=?", (uid,today)) as cur:
+            checked = await cur.fetchone()
+        async with db.execute("SELECT checkin_date FROM reading_checkins WHERE user_id=? ORDER BY checkin_date DESC LIMIT 30", (uid,)) as cur:
+            dates = [r[0] for r in await cur.fetchall()]
+        async with db.execute("SELECT COUNT(*) FROM reading_checkins WHERE user_id=? AND checkin_date>=date('now','-6 day')", (uid,)) as cur:
+            week_count = (await cur.fetchone())[0]
+    streak = 0
+    from datetime import date, timedelta
+    d = date.today()
+    date_set = set(dates)
+    if d.isoformat() not in date_set:
+        d -= timedelta(days=1)
+    while d.isoformat() in date_set:
+        streak += 1
+        d -= timedelta(days=1)
+    text = ("🔥 <b>7 kunlik mutolaa marafoni</b>\n\n"
+            f"📅 Shu haftadagi faol kunlar: <b>{week_count}/7</b>\n"
+            f"⚡ Ketma-ket kunlar: <b>{streak}</b>\n"
+            f"🎁 Har kuni belgilaganingiz uchun 2 ball beriladi. Bir kunda faqat bir marta.\n\n")
+    if checked:
+        text += f"✅ Bugun mutolaa qayd etilgan: {checked[0]} daqiqa. Ertaga davom eting!"
+        kb = None
+    else:
+        text += "Bugun qancha vaqt mutolaa qildingiz? Belgilang:"
+        kb = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="📖 10 daqiqa", callback_data="checkin:10"),
+            InlineKeyboardButton(text="📚 20 daqiqa", callback_data="checkin:20"),
+            InlineKeyboardButton(text="💪 30 daqiqa", callback_data="checkin:30"),
+        ]])
+    await message.answer(text, parse_mode="HTML", reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("checkin:"))
+async def reading_checkin(callback: CallbackQuery):
+    try: minutes = int(callback.data.split(":",1)[1])
+    except ValueError: await callback.answer("Vaqt noto'g'ri", show_alert=True); return
+    if minutes not in (10,20,30):
+        await callback.answer("Vaqt noto'g'ri", show_alert=True); return
+    uid = callback.from_user.id
+    today = datetime.now().strftime("%Y-%m-%d")
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT OR IGNORE INTO reading_checkins(user_id,checkin_date,minutes,created_at) VALUES(?,?,?,?)", (uid,today,minutes,_now()))
+        if cur.rowcount:
+            await db.execute("UPDATE users SET points=COALESCE(points,0)+2 WHERE id=?", (uid,))
+            await db.commit()
+            message = f"🎉 Zo'r! Bugungi {minutes} daqiqalik mutolaa qayd etildi. +2 ball! Ertaga yana davom eting."
+        else:
+            message = "Bugungi mutolaa allaqachon qayd etilgan. Ertaga yana ball olishingiz mumkin!"
+    await callback.answer("Qayd etildi")
+    await callback.message.answer(message)
+
+@dp.message(F.text == "🏆 Mening profilim")
+async def customer_profile(message: Message):
+    uid = message.from_user.id
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COALESCE(points,0) FROM users WHERE id=?", (uid,)) as cur:
+            row = await cur.fetchone()
+        points = row[0] if row else 0
+        async with db.execute("SELECT status,COUNT(*) FROM reading_log WHERE user_id=? GROUP BY status", (uid,)) as cur:
+            reading = dict(await cur.fetchall())
+        async with db.execute("SELECT COUNT(*) FROM orders WHERE user_id=?", (uid,)) as cur:
+            orders = (await cur.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM reading_checkins WHERE user_id=?", (uid,)) as cur:
+            days = (await cur.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM referrals WHERE inviter_id=?", (uid,)) as cur:
+            invites = (await cur.fetchone())[0]
+    level = "🌱 Yangi kitobxon"
+    if points >= 50: level = "📚 Faol kitobxon"
+    if points >= 150: level = "🏅 Bilim izlovchi"
+    if points >= 400: level = "👑 TAQWOBOOK ustasi"
+    await message.answer(
+        f"🏆 <b>Sizning TAQWOBOOK profilingiz</b>\n━━━━━━━━━━━━\n"
+        f"{level}\n⭐ Ballar: <b>{points}</b>\n\n"
+        f"📔 O'qimoqchi: {reading.get('reja',0)} ta\n"
+        f"📖 O'qiyapman: {reading.get('oqilyapti',0)} ta\n"
+        f"✅ O'qib bo'ldim: {reading.get('oqildi',0)} ta\n"
+        f"🔥 Mutolaa kunlari: {days}\n🛍 Buyurtmalar: {orders}\n👥 Takliflar: {invites}\n\n"
+        f"Ball yig'ish: kunlik viktorina (+ball) va mutolaa marafonida qatnashing!",
+        parse_mode="HTML",
+    )
+
+
+# ═══════════════════════════════════════════════════
+#  QO'SHIMCHA: KAYFIYATGA MOS TAVSIYA, REYTING, ESLATMA
+# ═══════════════════════════════════════════════════
+
+@dp.message(F.text == "💝 Kayfiyatga qarab")
+async def mood_recommendations(message: Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🌱 O'zimni rivojlantirish", callback_data="mood:grow")],
+        [InlineKeyboardButton(text="👨‍👩‍👧 Oila va tarbiya", callback_data="mood:family")],
+        [InlineKeyboardButton(text="🕌 Ma'naviyat va siyrat", callback_data="mood:faith")],
+        [InlineKeyboardButton(text="🧒 Bolalar uchun", callback_data="mood:kids")],
+        [InlineKeyboardButton(text="🎁 Tasodifiy tanlov", callback_data="mood:random")],
+    ])
+    await message.answer("💝 <b>Bugun nimani o'rganishni xohlaysiz?</b>\nKayfiyatingizga mos yo'nalishni tanlang:", reply_markup=kb, parse_mode="HTML")
+
+@dp.callback_query(F.data.startswith("mood:"))
+async def mood_recommendation_result(callback: CallbackQuery):
+    import random
+    mood = callback.data.split(":", 1)[1]
+    keys = {"grow": ("O'zini rivojlantirish", ("rivoj", "odat", "ilm", "tarbiya")),
+            "family": ("Oila va tarbiya", ("oila", "farzand", "tarbiya", "bola")),
+            "faith": ("Ma'naviyat va siyrat", ("siyrat", "aqida", "hadis", "qur", "tafsir", "odob")),
+            "kids": ("Bolalar uchun", ("bola", "bolalar", "ertak"))}
+    pool = list(BOOKS.items())
+    if mood in keys:
+        _, words = keys[mood]
+        pool = [(bid,b) for bid,b in pool if any(w in (b.get("name","")+" "+b.get("author","")+" "+b.get("description","")).lower() for w in words)]
+    if not pool:
+        pool = list(BOOKS.items())
+    if not pool:
+        await callback.answer("Hozircha kitob yo'q", show_alert=True); return
+    random.shuffle(pool)
+    lines = ["💝 <b>Siz uchun tavsiyalar</b>"]
+    for bid,b in pool[:5]:
+        lines.append(f"📚 <b>{b['name']}</b> — {fmt(b['price'])} so'm\n{b.get('author','')}")
+    await callback.message.answer("\n\n".join(lines), parse_mode="HTML", reply_markup=books_keyboard())
+    await callback.answer()
+
+@dp.message(F.text == "🥇 Kitobxonlar reytingi")
+async def reader_leaderboard(message: Message):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT first_name,points FROM users ORDER BY COALESCE(points,0) DESC,joined_at ASC LIMIT 10") as cur:
+            rows = await cur.fetchall()
+    if not rows:
+        await message.answer("Hali reyting uchun ma'lumot yo'q."); return
+    medals = ["🥇", "🥈", "🥉"]
+    lines = ["🏆 <b>TAQWOBOOK kitobxonlari reytingi</b>"]
+    for i,(name,points) in enumerate(rows,1):
+        lines.append(f"{medals[i-1] if i<=3 else str(i)+'.'} {name or 'Kitobxon'} — ⭐ {points or 0} ball")
+    lines.append("\nBall yig'ish uchun viktorina, mutolaa marafoni va buyurtmalarda qatnashing!")
+    await message.answer("\n".join(lines), parse_mode="HTML")
+
+@dp.message(F.text == "🔔 Mutolaa eslatmasi")
+async def toggle_reading_reminder(message: Message):
+    uid = message.from_user.id
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT enabled FROM reminder_settings WHERE user_id=?", (uid,)) as cur:
+            row = await cur.fetchone()
+        enabled = 0 if row and row[0] else 1
+        await db.execute("INSERT INTO reminder_settings(user_id,enabled,last_sent_date) VALUES(?,?,NULL) ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled", (uid,enabled))
+        await db.commit()
+    if enabled:
+        await message.answer("🔔 Mutolaa eslatmasi yoqildi! Har kuni taxminan soat 20:00 da (Toshkent vaqti) kitob o'qish eslatmasi yuboramiz. O'chirish uchun shu tugmani yana bosing.")
+    else:
+        await message.answer("🔕 Mutolaa eslatmasi o'chirildi.")
+
+async def reading_reminder_worker():
+    """Har kuni Toshkent vaqti bilan 20:00 da obuna bo'lganlarga bir marta eslatadi."""
+    from zoneinfo import ZoneInfo
+    from datetime import timedelta
+    while True:
+        try:
+            now = datetime.now(ZoneInfo("Asia/Tashkent"))
+            if now.hour == 20:
+                today = now.strftime("%Y-%m-%d")
+                async with aiosqlite.connect(DB_PATH) as db:
+                    async with db.execute("SELECT user_id FROM reminder_settings WHERE enabled=1 AND (last_sent_date IS NULL OR last_sent_date<>?)", (today,)) as cur:
+                        user_ids = [r[0] for r in await cur.fetchall()]
+                    for uid in user_ids:
+                        try:
+                            await bot.send_message(uid, "🔔 <b>Mutolaa vaqti!</b>\nBugun 10 daqiqa bo'lsa ham kitob o'qib, mutolaa marafonida kuningizni belgilang. 📚", parse_mode="HTML")
+                            await db.execute("UPDATE reminder_settings SET last_sent_date=? WHERE user_id=?", (today,uid))
+                        except (TelegramForbiddenError, TelegramBadRequest):
+                            pass
+                    await db.commit()
+        except Exception:
+            logger.exception("Mutolaa eslatmasida xato")
+        await asyncio.sleep(60)
+
 # ═══════════════════════════════════════════════════
 #  FALLBACK
 # ═══════════════════════════════════════════════════
@@ -2062,14 +2867,37 @@ async def fallback(message: Message, state: FSMContext):
 #  ISHGA TUSHIRISH (VPS / polling)
 # ═══════════════════════════════════════════════════
 async def main():
+    # Ishga tushishda bazaning SQLite backup API orqali xavfsiz nusxasi.
+    try:
+        import sqlite3
+        from datetime import date
+        db_file=Path(DB_PATH).expanduser().resolve()
+        if db_file.exists() and db_file.stat().st_size:
+            backup_dir=db_file.parent / "backups"; backup_dir.mkdir(parents=True,exist_ok=True)
+            target=backup_dir / f"orders-{date.today().isoformat()}.db"
+            src=sqlite3.connect(str(db_file)); dst=sqlite3.connect(str(target))
+            with dst: src.backup(dst)
+            dst.close(); src.close()
+            old=sorted(backup_dir.glob("orders-*.db"), key=lambda x:x.stat().st_mtime, reverse=True)
+            for stale in old[7:]: stale.unlink(missing_ok=True)
+    except Exception:
+        logger.exception("Avtomatik backup bajarilmadi")
     await init_db()
     logger.info("Kitob do'koni boti ishga tushdi.")
-    await dp.start_polling(
+    reminder_task = asyncio.create_task(reading_reminder_worker())
+    try:
+        await dp.start_polling(
         bot,
         allowed_updates=dp.resolve_used_update_types(),
         # Telegramda navbatda qolgan yangilanishlarni tashlab yubormaymiz.
         drop_pending_updates=False,
-    )
+        )
+    finally:
+        reminder_task.cancel()
+        try:
+            await reminder_task
+        except asyncio.CancelledError:
+            pass
 
 
 if __name__ == "__main__":
