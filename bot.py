@@ -58,11 +58,11 @@ if not TOKEN:
     raise RuntimeError("BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan. Tokenni kodga yozmang.")
 ADMIN_ID       = 6722242402
 ADMIN_USERNAME = "@admoyin_lvl"
-ADMIN_PHONE    = "+998950714664"
+ADMIN_PHONE    = "+998931407381"
 
 CARD_HOLDER = "Mustafayev Jonibek"
-HUMO_CARD   = "9860 1606 4184 4008
-VISA_CARD   = "4916 9903 2538 3294"
+HUMO_CARD   = "9860 1701 3065 6763"
+VISA_CARD   = "4023 0602 0575 2529"
 
 FLOOD_LIMIT      = 5
 FLOOD_INTERVAL   = 3
@@ -230,7 +230,7 @@ def apply_promo(total: int, code: str) -> tuple:
         disc = min(p["discount"], total)
         new  = total - disc
         desc = f"🎟️ Promo: -{fmt(disc)} so'm"
-    PROMO_CODES[code]["uses"] += 1
+    # Foydalanish soni buyurtma muvaffaqiyatli saqlangandan keyin oshiriladi.
     return new, desc
 
 def format_order_row(row) -> str:
@@ -271,13 +271,20 @@ def main_menu_keyboard(uid: int) -> ReplyKeyboardMarkup:
     ], resize_keyboard=True)
 
 def admin_menu_keyboard() -> ReplyKeyboardMarkup:
+    # Admin ham mijoz funksiyalarini sinab ko'ra olishi uchun barcha tugmalar ko'rsatiladi.
     return ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="📚 Kitoblar"),          KeyboardButton(text="🔍 Qidirish")],
-        [KeyboardButton(text="🛒 Savatcha"),           KeyboardButton(text="📦 Buyurtmalarim")],
-        [KeyboardButton(text="➕ Kitob qo'shish"),     KeyboardButton(text="📋 Kitoblar (Admin)")],
-        [KeyboardButton(text="📊 Admin panel"),        KeyboardButton(text="📣 Xabar yuborish")],
-        [KeyboardButton(text="🎟️ Promo yaratish"),    KeyboardButton(text="📑 Promolar")],
+        [KeyboardButton(text="📚 Kitoblar"), KeyboardButton(text="🔍 Qidirish")],
+        [KeyboardButton(text="🛒 Savatcha"), KeyboardButton(text="📦 Buyurtmalarim")],
+        [KeyboardButton(text="➕ Kitob qo'shish"), KeyboardButton(text="📋 Kitoblar (Admin)")],
+        [KeyboardButton(text="📊 Admin panel"), KeyboardButton(text="📣 Xabar yuborish")],
+        [KeyboardButton(text="🎟️ Promo yaratish"), KeyboardButton(text="📑 Promolar")],
         [KeyboardButton(text="📦 Ombor"), KeyboardButton(text="🎁 To'plamlar")],
+        [KeyboardButton(text="🧭 Kitob tanlash"), KeyboardButton(text="📔 Mutolaa kundaligi")],
+        [KeyboardButton(text="🎲 Kitob ruletkasi"), KeyboardButton(text="🎮 Bilim viktorinasi")],
+        [KeyboardButton(text="🔥 Mutolaa marafoni"), KeyboardButton(text="🏆 Mening profilim")],
+        [KeyboardButton(text="💝 Kayfiyatga qarab"), KeyboardButton(text="🥇 Kitobxonlar reytingi")],
+        [KeyboardButton(text="👥 Do'st taklif qilish"), KeyboardButton(text="💡 Kun hikmati")],
+        [KeyboardButton(text="🔔 Mutolaa eslatmasi"), KeyboardButton(text="ℹ️ Aloqa")],
     ], resize_keyboard=True)
 
 def get_main_menu(uid: int) -> ReplyKeyboardMarkup:
@@ -1704,6 +1711,17 @@ async def complete_order(message: Message, state: FSMContext, has_check: bool = 
             f"⏳ Admin tasdiqlashini kuting.\n"
             f"Savollar: {ADMIN_USERNAME}"
         )
+
+    # Promo ishlatilishini faqat saqlangan buyurtmadan keyin bir marta hisoblaymiz.
+    if promo_code and order_ids:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                "UPDATE promo_codes SET uses=uses+1 WHERE code=? AND (max_uses<=0 OR uses<max_uses)",
+                (promo_code,),
+            )
+            await db.commit()
+        if cur.rowcount and promo_code in PROMO_CODES:
+            PROMO_CODES[promo_code]["uses"] = int(PROMO_CODES[promo_code].get("uses", 0)) + 1
 
     # Ballar faqat buyurtma yuborilganda yechiladi; bekor qilinsa admin amalida qaytariladi.
     points_used = int(data.get("points_to_use", 0) or 0)
