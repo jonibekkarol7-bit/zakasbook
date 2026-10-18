@@ -2544,7 +2544,7 @@ async def book_guide(message: Message):
 async def guide_result(callback: CallbackQuery):
     topic = callback.data.split(":", 1)[1]
     keywords = {
-        "beginner": [, "odob", "asos", "islom", "namoz"],
+        "beginner": ["odob", "asos", "islom", "namoz"],
         "parents": ["tarbiya", "ota", "ona", "farzand", "oila"],
         "youth": ["yosh", "siyrat", "odob", "tarbiya"],
         "children": ["bola", "bolalar", "ertak", "tarbiya"],
