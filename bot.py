@@ -58,11 +58,11 @@ if not TOKEN:
     raise RuntimeError("BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan. Tokenni kodga yozmang.")
 ADMIN_ID       = 6722242402
 ADMIN_USERNAME = "@admoyin_lvl"
-ADMIN_PHONE    = "+998931407381"
+ADMIN_PHONE    = "+998950714664"
 
 CARD_HOLDER = "Mustafayev Jonibek"
-HUMO_CARD   = "9860 1701 3065 6763"
-VISA_CARD   = "4023 0602 0575 2529"
+HUMO_CARD   = "9860 1606 4184 4008"
+UZUM_CARD   = "4916 9903 2538 3294"
 
 FLOOD_LIMIT      = 5
 FLOOD_INTERVAL   = 3
@@ -2527,7 +2527,7 @@ async def admin_cancel_cb(callback: CallbackQuery):
 # ═══════════════════════════════════════════════════
 #  TAQWOBOOK — QO'SHIMCHA FUNKSIYALAR
 # ═══════════════════════════════════════════════════
-CATEGORIES = ["Qur'on va tafsir", "Hadis", "Siyrat", "Aqida", "Odob-axloq", "Bolalar uchun", "Boshqa"]
+CATEGORIES = ["Qur'on va tafsir", "Hadis", "Siyrat", "Odob-axloq", "Bolalar uchun", "Boshqa"]
 
 @dp.message(F.text == "🧭 Kitob tanlash")
 async def book_guide(message: Message):
@@ -2544,7 +2544,7 @@ async def book_guide(message: Message):
 async def guide_result(callback: CallbackQuery):
     topic = callback.data.split(":", 1)[1]
     keywords = {
-        "beginner": ["aqida", "odob", "asos", "islom", "namoz"],
+        "beginner": [, "odob", "asos", "islom", "namoz"],
         "parents": ["tarbiya", "ota", "ona", "farzand", "oila"],
         "youth": ["yosh", "siyrat", "odob", "tarbiya"],
         "children": ["bola", "bolalar", "ertak", "tarbiya"],
