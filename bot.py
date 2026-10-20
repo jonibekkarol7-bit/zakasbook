@@ -56,7 +56,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 TOKEN          = os.getenv("BOT_TOKEN", "").strip()
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan. Tokenni kodga yozmang.")
-ADMIN_ID       = 6722242402
+ADMIN_ID       = 7322205431
 ADMIN_USERNAME = "@admoyin_lvl"
 ADMIN_PHONE    = "+998950714664"
 
